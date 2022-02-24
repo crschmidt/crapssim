@@ -16,6 +16,12 @@
 
 from sim import TABLE_MIN
 
+def passline_amount(amount):
+    def f(player, point):
+        if not 'pass' in player.current_bets and not point:
+            player.bet('pass', amount)
+    return f
+
 def passline(player, point):
     if not 'pass' in player.current_bets and not point:
         player.bet('pass', TABLE_MIN)
