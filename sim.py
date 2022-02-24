@@ -18,13 +18,15 @@ import csv
 import random
 import math
 
+
 TABLE_MIN = 15
 
-DEBUG = False #True
+DEBUG = 0 
 
-def debug(s):
-    if DEBUG == True:
-        print s
+def debug(s, level=1):
+    if DEBUG:
+        if level <= DEBUG:
+            print s
 
 class Player():
     bankroll = 0
@@ -34,18 +36,29 @@ class Player():
     name = "Player"
     def __init__(self, bankroll = 0, name="Player"):
         self.current_bets = {}
-        self.bankroll = bankroll
+        self.bankroll = self.starting_bankroll = bankroll
         self.name = name
-    def bet(t, amount):
-        self.current_bets[t] = amount
-
+    def clear_bet(self, t):
+        del self.current_bets[t]
+    def bet(self, t, amount):
+        self.current_bets[t] = self.current_bets.get(t, 0)+amount
+        self.bankroll -= amount
+        self.total_bet_amount += amount
+        self.total_bets += 1
     def set_strategy(self, f):
         self.strategy = f
     def apply_strat(self, point):
         self.strategy(self, point)
+    def money(self, onthetable=True):
+        return self.bankroll + sum(self.current_bets.values())
+    def delta(self):
+        return self.money() - self.starting_bankroll
+
 
 def dual_reverse_strat(player, point):
-    if not 'pass' in player.current_bets or player.current_bets['pass'] == 0:
+    if not player.current_bets('pass', 0): 
+        player.bet('pass', TABLE_MIN)
+
         player.current_bets['pass'] = (TABLE_MIN)
         player.bankroll -= (TABLE_MIN)
         player.total_bets += 1
@@ -71,9 +84,7 @@ def dual_strat(player, point):
         player.total_bet_amount += TABLE_MIN
 
 def pass_strat_40(player, point):
-#    print "Pass: %s, %s" % (player.name, player.bankroll)
     if not 'pass' in player.current_bets or player.current_bets['pass'] == 0:
-#        print "Betting %s" % TABLE_MIN
         player.current_bets['pass'] = 40
         player.bankroll -= 40
         player.total_bets += 1
@@ -92,15 +103,6 @@ def pass_strat_25(player, point):
         player.bankroll -= 25
         player.total_bets += 1
         player.total_bet_amount += 25
-
-def pass_strat(player, point):
-#    print "Pass: %s, %s" % (player.name, player.bankroll)
-    if not 'pass' in player.current_bets or player.current_bets['pass'] == 0:
-#        print "Betting %s" % TABLE_MIN
-        player.current_bets['pass'] = TABLE_MIN
-        player.bankroll -= TABLE_MIN
-        player.total_bets += 1
-        player.total_bet_amount += TABLE_MIN
 
 def pass_center_odds_strat(player, point):
     pass_strat(player, point)
@@ -135,71 +137,100 @@ def pass_odds_strat(player, point):
         player.total_bets += 1
         player.total_bet_amount += bet
 
-def dontpass_strat(player, point):
-#    print "Don't Pass: %s, %s" % (player.name, player.bankroll)
-    if not 'dontpass' in player.current_bets or player.current_bets['dontpass'] == 0:
-#        print "Betting %s" % TABLE_MIN
-        player.current_bets['dontpass'] = TABLE_MIN
-        player.bankroll -= TABLE_MIN
-        player.total_bets += 1
-        player.total_bet_amount += TABLE_MIN
-
 ODDS_PAYOUT = {4: 2.0, 5: 1.5, 6: 1.2, 8: 1.2, 9: 1.5, 10: 2.0}
 
 def payout(player, roll, point):
-#    print player.name
     total = sum(roll)
     prev_bank = player.bankroll
     if 'pass' in player.current_bets:
+        strat = 'pass'
         bet = player.current_bets['pass']
         # Losers
         if point and total == 7:
-            player.current_bets['pass'] = 0
+            player.clear_bet(strat)
         elif point == None and total in [2,3,12]:
-            player.current_bets['pass'] = 0
+            player.clear_bet(strat)
         # Winners
         elif point and total == point:
             player.bankroll += (2 * bet)
-            player.current_bets['pass'] = 0
+            player.clear_bet(strat)
         elif point == None and total in [7, 11]:
-#            print "PAYOUT: Come out winner, %s" % player.bankroll
             player.bankroll += (2 * bet)
-            player.current_bets['pass'] = 0
-#            print "PAYOUT2: Come out winner, %s" % player.bankroll
+            player.clear_bet(strat)
+    
     if "dontpass" in player.current_bets:
         strat = "dontpass"
         bet = player.current_bets[strat]
         if point and total == 7:
             player.bankroll += (2 * bet)
-            player.current_bets[strat] = 0
+            player.clear_bet(strat)
         elif point == None and total in [2,3]:
             player.bankroll += (2 * bet)
-            player.current_bets[strat] = 0
+            player.clear_bet(strat)
         elif point and total == point:
-            player.current_bets[strat] = 0
+            player.clear_bet(strat)
         elif point == None and total in [7, 11]:
-            player.current_bets[strat] = 0
+            player.clear_bet(strat)
 
     if "passodds" in player.current_bets:
         strat = "passodds"
         bet = player.current_bets[strat]
         if point and total == 7:
-            player.current_bets['passodds'] = 0
+            player.clear_bet(strat)
         elif point and total == point:
             player.bankroll += bet
             player.bankroll += math.floor(bet * ODDS_PAYOUT[point])
+            player.clear_bet(strat)
+    
+    # Need to pay come bets *before* moving the come up
+    for i in [4, 5, 6, 8, 9, 10]:
+        strat = "come-%s" % i
+        if player.current_bets.get(strat, 0):
+            bet = player.current_bets[strat]
+            if total == 7:
+                player.clear_bet(strat)
+            elif total == i:
+                player.clear_bet(strat)
+                player.bankroll += 2 * bet
+        strat = "come-odds-%s" % i
+        if player.current_bets.get(strat, 0):
+            bet = player.current_bets[strat]
+            if total == 7:
+                player.clear_bet(strat)
+            elif total == i:
+                player.clear_bet(strat)
+                player.bankroll += bet
+                player.bankroll += math.floor(bet * ODDS_PAYOUT[total])
 
-            player.current_bets['passodds'] = 0
+    if "come" in player.current_bets and player.current_bets["come"] != 0:
+        strat = "come"
+        bet = player.current_bets[strat]
+        if point:
+            if total in [7, 11]:
+                player.clear_bet(strat)
+                player.bankroll += (2 * bet)
+            elif total in [2,3,12]:
+                player.clear_bet(strat)
+            else:
+                player.clear_bet(strat)
+                s = "come-%s" % total
+                player.current_bets[s] = bet
 
-#    print player.current_bets
-    debug("%s Winnings: %s" % (player.name, (player.bankroll - prev_bank)))
 
 
 class Sim():
+    players = None
+    rolls = None
+    rollcount = 100
 
-    players = []
+    def __init__(self):
+        self.players = []
 
     def roll(self):
+        if self.rolls != None:
+            if len(self.rolls):
+                return self.rolls.pop(0)
+            return []
         return [random.randint(1,6), random.randint(1,6)]
 
     def run(self):
@@ -223,18 +254,22 @@ class Sim():
         deltas = []
         bankrolls = []
         status = 0
-        while n < 10000:
+        while n < self.rollcount:
+            n += 1
+            if n % 10000 == 0: print "Roll #%s" % n
+            r = self.roll()
+            if len(r) == 0:
+                debug("Out of rolls")
+                break
             for p in self.players:
                 p.apply_strat(point)
-#        while status > -10:
-            n += 1
-            r = self.roll()
+                debug(" == %s == Bets: %s" % (p.name, p.current_bets), 2)
+            total = sum(r)
+            debug("Point is %s, Roll is %s (%s); paying players" % (point, total, r))
             for p in self.players:
                 payout(p, r, point)
-            total = sum(r)
 
             out = [n, point, total]
-            debug("Point is %s, Roll is %s (%s)" % (point, total, r))
             if point and total == 7:
                 debug("Seven out")
                 point = None
@@ -255,57 +290,14 @@ class Sim():
                 point = total
             status = points + come_winner - come_loser - seven_out
             for p in self.players:
-                debug("%s: %s" % (p.name, p.bankroll))
+                debug("%s: %s" % (p.name, p.money()))
             deltas.append(status)
             for i in self.players:
                 out.append(i.bankroll)
 
             w.writerow(out)
 
-#            bankrolls.append(self.players[0].bankroll)
-    #    print n
         print "Rolls: %s, Shooters: %s, Points Met: %s, Come winner: %s, Come Craps: %s, Seven out: %s" % (n, shooters, points, come_winner, come_loser, seven_out)
-#        print bankrolls
-#        print deltas
-        print status
-    #    print max(deltas), min(deltas)
         for p in self.players:
-            print "Strategy: %s; End bankroll: %s, Delta: %.3f%%" % (p.name, p.bankroll, (100.0*p.bankroll/p.total_bet_amount))
+            print "Strategy: %s; End bankroll: %s, Delta: %.3f%%" % (p.name, p.money(), (100.0*p.delta()/p.total_bet_amount))
         return n
-        
-
-
-if __name__ == "__main__":
-    s = Sim()
-    #p = Player(0, "Pass 10")
-    #p.set_strategy(pass_strat_10)
-    #s.players.append(p)
-    p = Player(0, "Pass 15")
-    p.set_strategy(pass_strat)
-    s.players.append(p)
-    #p = Player(0, "Pass 25")
-    #p.set_strategy(pass_strat_25)
-    #s.players.append(p)
-    #p = Player(0, "Pass 40")
-    #p.set_strategy(pass_strat_40)
-    #s.players.append(p)
-    p = Player(0, "Pass 15 Odds")
-    p.set_strategy(pass_odds_strat)
-    s.players.append(p)
-    p = Player(0, "Don't Pass")
-    p.set_strategy(dontpass_strat)
-    s.players.append(p)
-    p = Player(0, "Pass 15 1x Odds")
-    p.set_strategy(pass_1x_odds_strat)
-    s.players.append(p)
-    p = Player(0, "Pass 15 1x Inner Odds")
-    p.set_strategy(pass_center_odds_strat)
-    s.players.append(p)
-
-    #p = Player(0, "25 pass / 15 dp")
-    #p.set_strategy(dual_strat)
-    #s.players.append(p)
-    #p = Player(0, "25 dp / 15 pass")
-    #p.set_strategy(dual_reverse_strat)
-    #s.players.append(p)
-    s.runsim()
