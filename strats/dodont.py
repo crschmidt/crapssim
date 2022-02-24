@@ -13,25 +13,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+from strats.basic import passline_amount, dontline, passline, dontpass_amount
 from sim import TABLE_MIN
 
-def passline_amount(amount):
-    def f(player, point):
-        if not 'pass' in player.current_bets and not point:
-            player.bet('pass', amount)
-    return f
-
-def passline(player, point):
-    if not 'pass' in player.current_bets and not point:
-        player.bet('pass', TABLE_MIN)
-
-def dontline(player, point):
-    if not 'dontpass' in player.current_bets and not point:
-        player.bet('dontpass', TABLE_MIN)
-
-def dontpass_amount(amount):
-    def f(player, point):
-        if not 'dontpass' in player.current_bets and not point:
-            player.bet('dontpass', amount)
-    return f
+def dodont(player, point):
+    passline_amount(TABLE_MIN+10)(player, point)
+    dontline(player, point)
+def dontdo(player, point):
+    dontpass_amount(TABLE_MIN+10)(player, point)
+    passline(player, point)

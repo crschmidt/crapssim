@@ -54,89 +54,6 @@ class Player():
     def delta(self):
         return self.money() - self.starting_bankroll
 
-
-def dual_reverse_strat(player, point):
-    if not player.current_bets('pass', 0): 
-        player.bet('pass', TABLE_MIN)
-
-        player.current_bets['pass'] = (TABLE_MIN)
-        player.bankroll -= (TABLE_MIN)
-        player.total_bets += 1
-        player.total_bet_amount += (TABLE_MIN)
-
-    if not 'dontpass' in player.current_bets or player.current_bets['dontpass'] == 0:
-        player.current_bets['dontpass'] = (TABLE_MIN+10)
-        player.bankroll -= (TABLE_MIN+10)
-        player.total_bets += 1
-        player.total_bet_amount += (TABLE_MIN+10)
-
-def dual_strat(player, point):
-    if not 'pass' in player.current_bets or player.current_bets['pass'] == 0:
-        player.current_bets['pass'] = (TABLE_MIN + 10)
-        player.bankroll -= (TABLE_MIN + 10)
-        player.total_bets += 1
-        player.total_bet_amount += (TABLE_MIN + 10)
-
-    if not 'dontpass' in player.current_bets or player.current_bets['dontpass'] == 0:
-        player.current_bets['dontpass'] = TABLE_MIN
-        player.bankroll -= TABLE_MIN
-        player.total_bets += 1
-        player.total_bet_amount += TABLE_MIN
-
-def pass_strat_40(player, point):
-    if not 'pass' in player.current_bets or player.current_bets['pass'] == 0:
-        player.current_bets['pass'] = 40
-        player.bankroll -= 40
-        player.total_bets += 1
-        player.total_bet_amount += 40
-
-def pass_strat_10(player, point):
-    if not 'pass' in player.current_bets or player.current_bets['pass'] == 0:
-        player.current_bets['pass'] = 10
-        player.bankroll -= 10
-        player.total_bets += 1
-        player.total_bet_amount += 10
-
-def pass_strat_25(player, point):
-    if not 'pass' in player.current_bets or player.current_bets['pass'] == 0:
-        player.current_bets['pass'] = 25
-        player.bankroll -= 25
-        player.total_bets += 1
-        player.total_bet_amount += 25
-
-def pass_center_odds_strat(player, point):
-    pass_strat(player, point)
-    if not 'passodds' in player.current_bets or player.current_bets['passodds'] == 0:
-#        print "Betting %s" % TABLE_MIN
-        if point in [6,8]:
-            bet = TABLE_MIN
-            player.current_bets['passodds'] = bet
-            player.bankroll -= bet
-            player.total_bets += 1
-            player.total_bet_amount += bet
-
-def pass_1x_odds_strat(player, point):
-    pass_strat(player, point)
-#    print "Pass: %s, %s" % (player.name, player.bankroll)
-    if not 'passodds' in player.current_bets or player.current_bets['passodds'] == 0:
-#        print "Betting %s" % TABLE_MIN
-        bet = TABLE_MIN
-        player.current_bets['passodds'] = bet
-        player.bankroll -= bet
-        player.total_bets += 1
-        player.total_bet_amount += bet
-
-def pass_odds_strat(player, point):
-    pass_strat(player, point)
-#    print "Pass: %s, %s" % (player.name, player.bankroll)
-    if not 'passodds' in player.current_bets or player.current_bets['passodds'] == 0:
-#        print "Betting %s" % TABLE_MIN
-        bet = 3 * TABLE_MIN
-        player.current_bets['passodds'] = bet
-        player.bankroll -= bet
-        player.total_bets += 1
-        player.total_bet_amount += bet
-
 ODDS_PAYOUT = {4: 2.0, 5: 1.5, 6: 1.2, 8: 1.2, 9: 1.5, 10: 2.0}
 
 def payout(player, roll, point):
@@ -184,6 +101,41 @@ def payout(player, roll, point):
     
     # Need to pay come bets *before* moving the come up
     for i in [4, 5, 6, 8, 9, 10]:
+        strat = "dontcome-%s" % i
+        if player.current_bets.get(strat, 0):
+            bet = player.current_bets[strat]
+            if total == 7:
+                player.clear_bet(strat)
+                player.bankroll += 2 * bet
+            elif total == i:
+                player.clear_bet(strat)
+        strat = "dontcome-odds-%s" % i
+        if player.current_bets.get(strat, 0):
+            bet = player.current_bets[strat]
+            if total == 7:
+                player.bankroll += bet
+                player.bankroll += math.floor(bet * ODDS_PAYOUT[total])
+                player.clear_bet(strat)
+            elif total == i:
+                player.clear_bet(strat)
+
+    if player.current_bets.get("dontcome", 0):
+        strat = "dontcome"
+        bet = player.current_bets[strat]
+        if point:
+            if total in [7, 11]:
+                player.clear_bet(strat)
+            elif total in [2,3]:
+                player.bankroll += (2 * bet)
+                player.clear_bet(strat)
+            else:
+                # Move the bet up
+                player.clear_bet(strat)
+                s = "dontcome-%s" % total
+                player.current_bets[s] = bet
+    
+    # Need to pay come bets *before* moving the come up
+    for i in [4, 5, 6, 8, 9, 10]:
         strat = "come-%s" % i
         if player.current_bets.get(strat, 0):
             bet = player.current_bets[strat]
@@ -212,6 +164,7 @@ def payout(player, roll, point):
             elif total in [2,3,12]:
                 player.clear_bet(strat)
             else:
+                # Move the bet up
                 player.clear_bet(strat)
                 s = "come-%s" % total
                 player.current_bets[s] = bet

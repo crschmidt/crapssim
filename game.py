@@ -17,10 +17,11 @@
 import sys
 import sim
 from sim import Sim, Player
-from strats.basic import passline, dontline
+from strats.basic import passline, dontline, passline_amount
 import strats.odds
 from strats.always_come import pass_come_strat
 from strats.hedgelesshorseman import hedgelesshorseman
+from strats.dodont import dodont, dontdo
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
@@ -28,6 +29,15 @@ if __name__ == "__main__":
     s = Sim()
     p = Player(0, "Pass")
     p.set_strategy(passline)
+    s.players.append(p)
+    p = Player(0, "Don't Pass")
+    p.set_strategy(dontline)
+    s.players.append(p)
+    p = Player(0, "$25 Pass/$15 Don't")
+    p.set_strategy(dodont)
+    s.players.append(p)
+    p = Player(0, "$25 Don't/$15 Pass")
+    p.set_strategy(dontdo)
     s.players.append(p)
     p = Player(0, "Dont")
     p.set_strategy(dontline)
