@@ -22,11 +22,13 @@ import strats.odds
 from strats.always_come import pass_come_strat
 from strats.hedgelesshorseman import hedgelesshorseman
 from strats.dodont import dodont, dontdo
+from rolls.colorup import casinoquest_hedge
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
         sim.DEBUG = int(sys.argv[1])
     s = Sim()
+   # s.rolls = casinoquest_hedge
     p = Player(0, "Pass")
     p.set_strategy(passline)
     s.players.append(p)
@@ -60,5 +62,5 @@ if __name__ == "__main__":
     p = Player(0, "Hedgeless")
     p.set_strategy(hedgelesshorseman)
     s.players.append(p)
-    s.rollcount = 5000
+    s.rollcount = 100000
     s.runsim()

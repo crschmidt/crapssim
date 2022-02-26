@@ -195,6 +195,8 @@ class Sim():
         print "Worst: %s; Best: %s; Average: %s" % (min(rolls), max(rolls), float(sum(rolls))/len(rolls))
 
     def runsim(self):
+        w2 = csv.writer(open("edge.csv", "w"))
+        w2.writerow(["rollnum", "point", "total"] + map(lambda x: x.name, self.players))
         w = csv.writer(open("out.csv", "w"))
         w.writerow(["rollnum", "point", "total"] + map(lambda x: x.name, self.players))
         point = None
@@ -223,6 +225,7 @@ class Sim():
                 payout(p, r, point)
 
             out = [n, point, total]
+            out2 = [n, point, total]
             if point and total == 7:
                 debug("Seven out")
                 point = None
@@ -247,8 +250,11 @@ class Sim():
             deltas.append(status)
             for i in self.players:
                 out.append(i.bankroll)
+            for i in self.players:
+                out2.append("%.2f" % (100.0*i.delta()/i.total_bet_amount))
 
             w.writerow(out)
+            w2.writerow(out2)
 
         print "Rolls: %s, Shooters: %s, Points Met: %s, Come winner: %s, Come Craps: %s, Seven out: %s" % (n, shooters, points, come_winner, come_loser, seven_out)
         for p in self.players:
