@@ -18,7 +18,7 @@ import csv
 import random
 import math
 
-from bets import *
+from bets import payouts
 
 TABLE_MIN = 15
 
@@ -35,17 +35,27 @@ class Player():
     total_bet_amount = 0
     current_bets = None
     name = "Player"
+    min_rack = 0
+
     def __init__(self, bankroll = 0, name="Player"):
         self.current_bets = {}
         self.bankroll = self.starting_bankroll = bankroll
         self.name = name
     def clear_bet(self, t):
         del self.current_bets[t]
+    def unbet(self, t):
+        if t in 'pass' or t.startswith("come-"): return
+        bet = self.current_bets.get(t, 0)
+        self.bankroll += bet
+        del self.current_bets[t]
+        
     def bet(self, t, amount):
         self.current_bets[t] = self.current_bets.get(t, 0)+amount
         self.bankroll -= amount
         self.total_bet_amount += amount
         self.total_bets += 1
+        if self.bankroll < self.min_rack:
+            self.min_rack = self.bankroll
     def set_strategy(self, f):
         self.strategy = f
     def apply_strat(self, point):
@@ -56,12 +66,6 @@ class Player():
         return self.money() - self.starting_bankroll
 
 ODDS_PAYOUT = {4: 2.0, 5: 1.5, 6: 1.2, 8: 1.2, 9: 1.5, 10: 2.0}
-
-payouts = {
-        'pass': pay_pass,
-        'dontpass': pay_dontpass,
-        'passoddds': pay_passodds,
-        }
 
 
 def payout(player, roll, point):
@@ -250,4 +254,4 @@ class Sim():
 
         print "Rolls: %s, Shooters: %s, Points Met: %s, Come winner: %s, Come Craps: %s, Seven out: %s" % (self.rollnum, self.outcomes['shooters'], self.outcomes['points'], self.outcomes['comeout_winner'], self.outcomes['comeout_loser'], self.outcomes['seven_out'])
         for p in self.players:
-            print "Strategy: %s; End bankroll: %s, Delta: %.3f%%" % (p.name, p.money(), (100.0*p.delta()/p.total_bet_amount))
+            print "Strategy: %s; End bankroll: %s, Delta: %.3f%% (min rack: %s)" % (p.name, p.money(), (100.0*p.delta()/p.total_bet_amount), p.min_rack)
