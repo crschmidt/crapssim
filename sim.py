@@ -146,11 +146,31 @@ class Sim():
     players = None
     rolls = None
     rollcount = 100
+    outcomes = None
+    point = None
+    new_shooter = True
+    rollnum = 0
 
     def __init__(self):
         self.players = []
+        self.writers = {
+                'edge': csv.writer(open('edge.csv', 'w')),
+                'roll': csv.writer(open('roll.csv', 'w')),
+                'shooter': csv.writer(open('shooter.csv', 'w')),
+            }
+        self.outcomes = {
+                'shooters': 0,
+                'points': 0,
+                'comeout_winner': 0,
+                'comeout_loser': 0,
+                'seven_out': 0,
+            }
 
-    def roll(self):
+    def outcome(self, name):
+        debug(name)
+        self.outcomes[name] += 1
+
+    def rolldice(self):
         if self.rolls != None:
             if len(self.rolls):
                 return self.rolls.pop(0)
@@ -165,81 +185,69 @@ class Sim():
         print "Broke in under an hour: %s" % len(filter(lambda x: x < 120, rolls))
         print "Worst: %s; Best: %s; Average: %s" % (min(rolls), max(rolls), float(sum(rolls))/len(rolls))
 
+    def write_header(self):
+        for v in self.writers.values():
+            v.writerow(["rollnum", "point", "total"] + map(lambda x: x.name, self.players))
+
+    def write(self, roll_status, new_shooter=False):
+        roll = roll_status[:]
+        for i in self.players:
+            roll.append(i.bankroll)
+        self.writers['roll'].writerow(roll)
+        if new_shooter:
+            edge = roll_status[:]
+            shooter = roll_status[:]
+            for i in self.players:
+                edge.append("%.2f" % (100.0*i.delta()/i.total_bet_amount))
+                shooter.append(i.bankroll - i.shooter_start)
+            self.writers['shooter'].writerow(shooter)
+            self.writers['edge'].writerow(edge)
+
+    def singleroll(self):
+        self.rollnum += 1
+        if self.rollnum % 10000 == 0: print "Roll #%s" % self.rollnum
+        r = self.rolldice()
+        if len(r) == 0:
+            debug("Out of rolls")
+            return False
+        if self.new_shooter == True:
+            for p in self.players:
+                p.shooter_start = p.bankroll
+            self.new_shooter = False
+            self.outcome('shooters')
+        for p in self.players:
+            p.apply_strat(self.point)
+            debug(" == %s == Bets: %s" % (p.name, p.current_bets), 2)
+        total = sum(r)
+        debug("Point is %s, Roll is %s (%s); paying players" % (self.point, total, r))
+        for p in self.players:
+            payout(p, r, self.point)
+
+        roll_status = [self.rollnum, self.point, total]
+        if self.point and total == 7:
+            self.outcome('seven_out')
+            self.point = None
+            self.new_shooter = True
+        elif self.point and total == self.point:
+            self.outcome('points')
+            self.point = None
+        elif self.point == None and total in [7, 11]:
+            self.outcome('comeout_winner')
+        elif self.point == None and total in [2, 3, 12]:
+            self.outcome('comeout_loser')
+        elif self.point == None:
+            debug("Point is %s" % total)
+            self.point = total
+        for p in self.players:
+            debug("%s: %s" % (p.name, p.money()))
+        self.write(roll_status, self.new_shooter)
+
     def runsim(self):
-        w2 = csv.writer(open("edge.csv", "w"))
-        w2.writerow(["rollnum", "point", "total"] + map(lambda x: x.name, self.players))
-        w = csv.writer(open("out.csv", "w"))
-        w.writerow(["rollnum", "point", "total"] + map(lambda x: x.name, self.players))
-        shooter_output = csv.writer(open("shooters.csv", "w"))
-        shooter_output.writerow(["rollnum", "point", "total"] + map(lambda x: x.name, self.players))
-        point = None
-        n = 0
-        shooters = 1
-        points = 0
-        come_winner = 0
-        come_loser = 0
-        seven_out = 0
-        deltas = []
-        bankrolls = []
-        status = 0
-        new_shooter = True
-        while n < self.rollcount:
-            n += 1
-            if n % 10000 == 0: print "Roll #%s" % n
-            r = self.roll()
-            if len(r) == 0:
-                debug("Out of rolls")
-                break
-            if new_shooter == True:
-                for p in self.players:
-                    p.shooter_start = p.bankroll
-                new_shooter = False
-            for p in self.players:
-                p.apply_strat(point)
-                debug(" == %s == Bets: %s" % (p.name, p.current_bets), 2)
-            total = sum(r)
-            debug("Point is %s, Roll is %s (%s); paying players" % (point, total, r))
-            for p in self.players:
-                payout(p, r, point)
+        self.write_header()
+        stop = False
+        while self.rollnum < self.rollcount and not stop:
+            stop = self.singleroll()
 
-            out = [n, point, total]
-            out2 = [n, point, total]
-            shooter_status = [n, point, total]
-            if point and total == 7:
-                debug("Seven out")
-                point = None
-                shooters += 1
-                seven_out += 1
-                new_shooter = True
-            elif point and total == point:
-                debug("Point met")
-                point = None
-                points += 1
-            elif point == None and total in [7, 11]:
-                debug("Winner")
-                come_winner += 1
-            elif point == None and total in [2, 3, 12]:
-                debug("Loser")
-                come_loser += 1
-            elif point == None:
-                debug("Point is %s" % total)
-                point = total
-            status = points + come_winner - come_loser - seven_out
-            for p in self.players:
-                debug("%s: %s" % (p.name, p.money()))
-            deltas.append(status)
-            for i in self.players:
-                out.append(i.bankroll)
-            for i in self.players:
-                out2.append("%.2f" % (100.0*i.delta()/i.total_bet_amount))
-            if new_shooter:
-                for i in self.players:
-                    shooter_status.append(i.bankroll - i.shooter_start)
-                shooter_output.writerow(shooter_status)
-            w.writerow(out)
-            w2.writerow(out2)
-
-        print "Rolls: %s, Shooters: %s, Points Met: %s, Come winner: %s, Come Craps: %s, Seven out: %s" % (n, shooters, points, come_winner, come_loser, seven_out)
+        print "Rolls: %s, Shooters: %s, Points Met: %s, Come winner: %s, Come Craps: %s, Seven out: %s" % (self.rollnum, self.outcomes['shooters'], self.outcomes['points'], self.outcomes['comeout_winner'], self.outcomes['comeout_loser'], self.outcomes['seven_out'])
         for p in self.players:
             print "Strategy: %s; End bankroll: %s, Delta: %.3f%%" % (p.name, p.money(), (100.0*p.delta()/p.total_bet_amount))
-        return n
