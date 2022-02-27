@@ -17,11 +17,12 @@
 import sys
 import sim
 from sim import Sim, Player
-from strats.basic import passline, dontline, passline_amount
+from strats.basic import passline, dontline, passline_amount, always_field, always_hards, any_craps
 import strats.odds
 from strats.always_come import pass_come_strat
 from strats.hedgelesshorseman import hedgelesshorseman
 from strats.dodont import dodont, dontdo
+import strats.place
 from rolls.colorup import casinoquest_hedge
 
 if __name__ == "__main__":
@@ -32,35 +33,51 @@ if __name__ == "__main__":
     p = Player(0, "Pass")
     p.set_strategy(passline)
     s.players.append(p)
-    p = Player(0, "Don't Pass")
-    p.set_strategy(dontline)
+    p = Player(0, "Craps")
+    p.set_strategy(any_craps)
     s.players.append(p)
-    p = Player(0, "$25 Pass/$15 Don't")
-    p.set_strategy(dodont)
+    p = Player(0, "Hards")
+    p.set_strategy(always_hards)
     s.players.append(p)
-    p = Player(0, "$25 Don't/$15 Pass")
-    p.set_strategy(dontdo)
+    p = Player(0, "Place 6/8")
+    p.set_strategy(strats.place.place_6_8)
     s.players.append(p)
-    p = Player(0, "Dont")
-    p.set_strategy(dontline)
+    p = Player(0, "Place Inside")
+    p.set_strategy(strats.place.place_inside)
     s.players.append(p)
-    p = Player(0, "Pass 100x")
-    p.set_strategy(strats.odds.pass_100x)
+    p = Player(0, "Field only")
+    p.set_strategy(always_field)
     s.players.append(p)
-    p = Player(0, "Pass 10x")
-    p.set_strategy(strats.odds.pass_10x)
-    s.players.append(p)
-    p = Player(0, "Pass 5x")
-    p.set_strategy(strats.odds.pass_5x)
-    s.players.append(p)
-    p = Player(0, "Pass 5x 6/8")
-    p.set_strategy(strats.odds.pass_5x_6_8)
-    s.players.append(p)
-    p = Player(0, "Pass Come")
-    p.set_strategy(pass_come_strat)
-    s.players.append(p)
-    p = Player(0, "Hedgeless")
-    p.set_strategy(hedgelesshorseman)
-    s.players.append(p)
-    s.rollcount = 2500
+
+    #p = Player(0, "Don't Pass")
+    #p.set_strategy(dontline)
+    #s.players.append(p)
+    #p = Player(0, "$25 Pass/$15 Don't")
+    #p.set_strategy(dodont)
+    #s.players.append(p)
+    #p = Player(0, "$25 Don't/$15 Pass")
+    #p.set_strategy(dontdo)
+    #s.players.append(p)
+    #p = Player(0, "Dont")
+    #p.set_strategy(dontline)
+    #s.players.append(p)
+    #p = Player(0, "Pass 100x")
+    #p.set_strategy(strats.odds.pass_100x)
+    #s.players.append(p)
+    #p = Player(0, "Pass 10x")
+    #p.set_strategy(strats.odds.pass_10x)
+    #s.players.append(p)
+    #p = Player(0, "Pass 5x")
+    #p.set_strategy(strats.odds.pass_5x)
+    #s.players.append(p)
+    #p = Player(0, "Pass 5x 6/8")
+    #p.set_strategy(strats.odds.pass_5x_6_8)
+    #s.players.append(p)
+    #p = Player(0, "Pass Come")
+    #p.set_strategy(pass_come_strat)
+    #s.players.append(p)
+    #p = Player(0, "Hedgeless")
+    #p.set_strategy(hedgelesshorseman)
+    #s.players.append(p)
+    s.rollcount = 250
     s.runsim()

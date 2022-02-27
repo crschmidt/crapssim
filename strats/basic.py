@@ -35,3 +35,16 @@ def dontpass_amount(amount):
         if not 'dontpass' in player.current_bets and not point:
             player.bet('dontpass', amount)
     return f
+
+def always_field(player, point):
+    if not 'field' in player.current_bets:
+        player.bet('field', TABLE_MIN)
+
+def always_hards(player, point):
+    for i in [4, 6, 8, 10]:
+        if not ('hardway-%s' % i) in player.current_bets:
+            player.bet('hardway-%s' % i, 1)
+
+def any_craps(player, point):
+    if not player.current_bets.get("anycraps", 0):
+        player.bet('anycraps', 1)
