@@ -18,6 +18,7 @@ import csv
 import random
 import math
 
+from bets import *
 
 TABLE_MIN = 15
 
@@ -56,49 +57,21 @@ class Player():
 
 ODDS_PAYOUT = {4: 2.0, 5: 1.5, 6: 1.2, 8: 1.2, 9: 1.5, 10: 2.0}
 
+payouts = {
+        'pass': pay_pass,
+        'dontpass': pay_dontpass,
+        'passoddds': pay_passodds,
+        }
+
+
 def payout(player, roll, point):
     total = sum(roll)
     prev_bank = player.bankroll
-    if 'pass' in player.current_bets:
-        strat = 'pass'
-        bet = player.current_bets['pass']
-        # Losers
-        if point and total == 7:
-            player.clear_bet(strat)
-        elif point == None and total in [2,3,12]:
-            player.clear_bet(strat)
-        # Winners
-        elif point and total == point:
-            player.bankroll += (2 * bet)
-            player.clear_bet(strat)
-        elif point == None and total in [7, 11]:
-            player.bankroll += (2 * bet)
-            player.clear_bet(strat)
-    
-    if "dontpass" in player.current_bets:
-        strat = "dontpass"
-        bet = player.current_bets[strat]
-        if point and total == 7:
-            player.bankroll += (2 * bet)
-            player.clear_bet(strat)
-        elif point == None and total in [2,3]:
-            player.bankroll += (2 * bet)
-            player.clear_bet(strat)
-        elif point and total == point:
-            player.clear_bet(strat)
-        elif point == None and total in [7, 11]:
-            player.clear_bet(strat)
+    for strat in payouts:
+        if player.current_bets.get(strat, 0) > 0:
+            bet = player.current_bets[strat]
+            payouts[strat](player, roll, point, bet, total)
 
-    if "passodds" in player.current_bets:
-        strat = "passodds"
-        bet = player.current_bets[strat]
-        if point and total == 7:
-            player.clear_bet(strat)
-        elif point and total == point:
-            player.bankroll += bet
-            player.bankroll += math.floor(bet * ODDS_PAYOUT[point])
-            player.clear_bet(strat)
-    
     # Need to pay come bets *before* moving the come up
     for i in [4, 5, 6, 8, 9, 10]:
         strat = "dontcome-%s" % i
@@ -169,8 +142,6 @@ def payout(player, roll, point):
                 s = "come-%s" % total
                 player.current_bets[s] = bet
 
-
-
 class Sim():
     players = None
     rolls = None
@@ -199,6 +170,8 @@ class Sim():
         w2.writerow(["rollnum", "point", "total"] + map(lambda x: x.name, self.players))
         w = csv.writer(open("out.csv", "w"))
         w.writerow(["rollnum", "point", "total"] + map(lambda x: x.name, self.players))
+        shooter_output = csv.writer(open("shooters.csv", "w"))
+        shooter_output.writerow(["rollnum", "point", "total"] + map(lambda x: x.name, self.players))
         point = None
         n = 0
         shooters = 1
@@ -209,6 +182,7 @@ class Sim():
         deltas = []
         bankrolls = []
         status = 0
+        new_shooter = True
         while n < self.rollcount:
             n += 1
             if n % 10000 == 0: print "Roll #%s" % n
@@ -216,6 +190,10 @@ class Sim():
             if len(r) == 0:
                 debug("Out of rolls")
                 break
+            if new_shooter == True:
+                for p in self.players:
+                    p.shooter_start = p.bankroll
+                new_shooter = False
             for p in self.players:
                 p.apply_strat(point)
                 debug(" == %s == Bets: %s" % (p.name, p.current_bets), 2)
@@ -226,11 +204,13 @@ class Sim():
 
             out = [n, point, total]
             out2 = [n, point, total]
+            shooter_status = [n, point, total]
             if point and total == 7:
                 debug("Seven out")
                 point = None
                 shooters += 1
                 seven_out += 1
+                new_shooter = True
             elif point and total == point:
                 debug("Point met")
                 point = None
@@ -252,7 +232,10 @@ class Sim():
                 out.append(i.bankroll)
             for i in self.players:
                 out2.append("%.2f" % (100.0*i.delta()/i.total_bet_amount))
-
+            if new_shooter:
+                for i in self.players:
+                    shooter_status.append(i.bankroll - i.shooter_start)
+                shooter_output.writerow(shooter_status)
             w.writerow(out)
             w2.writerow(out2)
 

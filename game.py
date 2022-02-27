@@ -62,5 +62,5 @@ if __name__ == "__main__":
     p = Player(0, "Hedgeless")
     p.set_strategy(hedgelesshorseman)
     s.players.append(p)
-    s.rollcount = 100000
+    s.rollcount = 2500
     s.runsim()
