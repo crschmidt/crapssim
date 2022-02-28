@@ -36,9 +36,12 @@ class Player():
     current_bets = None
     name = "Player"
     min_rack = 0
+    allow_overbet = True
+    strat_status = None
 
     def __init__(self, bankroll = 0, name="Player"):
         self.current_bets = {}
+        self.strat_status = {}
         self.bankroll = self.starting_bankroll = bankroll
         self.name = name
     def clear_bet(self, t):
@@ -50,6 +53,9 @@ class Player():
         del self.current_bets[t]
         
     def bet(self, t, amount):
+        if self.allow_overbet != True and amount > self.bankroll:
+            debug("Attempted overbet %s on bankroll of %s" % (amount, self.bankroll), 1)
+            return
         self.current_bets[t] = self.current_bets.get(t, 0)+amount
         self.bankroll -= amount
         self.total_bet_amount += amount
