@@ -3,6 +3,7 @@ import math
 ODDS_PAYOUT = {4: 2.0, 5: 1.5, 6: 1.2, 8: 1.2, 9: 1.5, 10: 2.0}
 PLACE_PAYOUT = {4: 9.0/5, 5: 7.0/5, 6: 7.0/6, 8: 7.0/6, 9: 7.0/5, 10: 9.0/5}
 HARDWAY_PAYOUT = {4: 7, 6: 9, 8: 9, 10: 7}
+LAY_PAYOUT = {4: 0.5, 5: 2.0/3, 6: 5.0/6, 8: 5.0/6, 9: 2.0/3, 10: 0.5}
 
 
 def any_craps(player, roll, point, bet, total):
@@ -43,6 +44,19 @@ def pay_place_gen(num):
             player.bankroll += math.floor(bet * PLACE_PAYOUT[num])
         if point and total == 7:
             player.clear_bet(strat)
+    return f
+
+def pay_lay_gen(num):
+    def f(player, roll, point, bet, total):
+        strat = 'lay-%s' % num
+        if total == num:
+            player.clear_bet(strat)
+        elif total == 7:
+            player.clear_bet(strat)
+            player.bankroll += bet
+            lay_pay = math.floor(bet * LAY_PAYOUT[num])
+            player.bankroll += lay_pay
+            player.bankroll -= math.ceil(lay_pay * .05)
     return f
 
 def pay_pass(player, roll, point, bet, total):
@@ -94,3 +108,4 @@ for i in [4, 6, 8, 10]:
     payouts['hardway-%i' % i] = hardway_gen(i)
 for i in range(4, 11):
     payouts['place-%s' % i] = pay_place_gen(i)
+    payouts['lay-%s' % i] = pay_lay_gen(i)

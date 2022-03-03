@@ -48,11 +48,14 @@ class Player():
         del self.current_bets[t]
     def unbet(self, t):
         if t in 'pass' or t.startswith("come-"): return
+        if not t in self.current_bets: return
         bet = self.current_bets.get(t, 0)
         self.bankroll += bet
         del self.current_bets[t]
         
     def bet(self, t, amount):
+        if t not in payouts:
+            raise Exception("%s not a valid bet" % t)
         if self.allow_overbet != True and amount > self.bankroll:
             debug("Attempted overbet %s on bankroll of %s" % (amount, self.bankroll), 1)
             return
@@ -64,8 +67,11 @@ class Player():
             self.min_rack = self.bankroll
     def set_strategy(self, f):
         self.strategy = f
-    def apply_strat(self, point):
-        self.strategy(self, point)
+    def apply_strat(self, point, new_shooter=False):
+        try:
+            self.strategy(self, point, new_shooter)
+        except Exception, E:
+            self.strategy(self, point)
     def money(self, onthetable=True):
         return self.bankroll + sum(self.current_bets.values())
     def delta(self):
@@ -219,14 +225,15 @@ class Sim():
         r = self.rolldice()
         if len(r) == 0:
             debug("Out of rolls")
-            return False
+            return True
+        ns = self.new_shooter
         if self.new_shooter == True:
             for p in self.players:
                 p.shooter_start = p.bankroll
             self.new_shooter = False
             self.outcome('shooters')
         for p in self.players:
-            p.apply_strat(self.point)
+            p.apply_strat(self.point, ns)
             debug(" == %s == Bets: %s" % (p.name, p.current_bets), 2)
         total = sum(r)
         debug("Point is %s, Roll is %s (%s); paying players" % (self.point, total, r))

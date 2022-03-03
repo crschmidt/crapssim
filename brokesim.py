@@ -3,6 +3,8 @@ from strats.basic import passline
 from strats.hedgelesshorseman import hedgelesshorseman
 from strats.basic import passline, dontline, passline_amount, always_field, always_hards, any_craps
 from strats.odds import pass_5x_6_8
+from strats.colorup import conservative_15
+import strats.testing
 
 broke = 0
 double = 0
@@ -18,7 +20,7 @@ w = csv.writer(open("out.csv", "w"))
 for i in range(RUNS):
     s = Sim()
     p = Player(0, "Pass")
-    p.set_strategy(hedgelesshorseman)
+    p.set_strategy(passline)
     s.players.append(p)
     for j in range(250):
         s.singleroll()
