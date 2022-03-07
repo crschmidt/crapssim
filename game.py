@@ -22,7 +22,7 @@ import strats.odds
 from strats.always_come import pass_come_strat
 from strats.hedgelesshorseman import hedgelesshorseman
 from strats.dodont import dodont, dontdo
-from strats.colorup import conservative_15
+from strats.colorup import conservative_15, darkside_hedge
 import strats.place
 import strats.testing
 from rolls.colorup import casinoquest_hedge, conservative
@@ -43,6 +43,9 @@ if __name__ == "__main__":
     s.players.append(p)
     p = Player(0, "DP/Lay")
     p.set_strategy(strats.testing.lay_place)
+    s.players.append(p)
+    p = Player(0, "Darkside Hedge")
+    p.set_strategy(darkside_hedge)
     s.players.append(p)
 #    p = Player(0, "Craps")
 #    p.set_strategy(any_craps)
@@ -78,5 +81,5 @@ if __name__ == "__main__":
 #    p = Player(0, "Allpoint Molly")
 #    p.set_strategy(pass_come_strat)
 #    s.players.append(p)
-    s.rollcount = 250
+    s.rollcount = 5000
     s.runsim()

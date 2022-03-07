@@ -18,3 +18,15 @@ def conservative_15(player, point, new_shooter=False):
     if player.strat_status['placewins'] >= 2:
         player.unbet('place-6')
         player.unbet('place-8')
+
+# How Math Teacher Wins at Casino Craps"
+def darkside_hedge(player, point, new_shooter=False):
+#    if not point:
+#        if not 'horn-12' in player.current_bets:
+#            player.bet('horn-12', 1)
+    if not 'dontpass' in player.current_bets:
+        player.bet('dontpass', 15)
+    for i in ['lay-4', 'lay-10']:
+        if not i in player.current_bets:
+            player.bet(i, 40)
+
