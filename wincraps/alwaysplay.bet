@@ -1,0 +1,62 @@
+' Bet strategy for my typical way of playing:
+'  - Bet the pass line
+'  - Place 6/8 (if not the point)
+'  - After a first win, bet the 5
+'  - After a second win, bet the field
+'  - Reset your wins after each shooter
+' This file also includes session management for analysis: If you increase your money by 50% 150 rolls, or are down to 10% of your starting bankroll, a new session will start, or if you hit 250 rolls. Only about 8% of sessions make it that far.
+' With a $500 starting bankroll, about 39% of sessions are winners; 44% of sessions hit stoploss. Average loss is $130/session.
+
+If new shooter Then
+   cs2.wins = 0 :
+   cs3.units = 5
+EndIf
+
+' Incrementing win counters 
+If PassLine wins Then
+   Add 1 to cs2.wins
+EndIf
+If Place5 wins Then
+   Add 1 to cs2.wins
+EndIf
+If Place6 wins Then
+   Add 1 to cs2.wins
+EndIf
+If Place8 wins Then
+   Add 1 to cs2.wins
+EndIf
+If Field wins And (Dice total = 2 Or Dice total = 12) Then
+   Add 1 to cs3.units
+EndIf
+
+If
+   Next roll is a comeout roll And
+   PassLine is equal to $0
+Then
+   Bet cs3 * $5 on PassLine
+EndIf
+
+If A Point is established on any(4, 5, 6, 8, 9, 10) Then
+   Bet cs3 * $6 on Place6 :
+   Bet cs3 * $6 on Place8 :
+   Remove Place(point)
+EndIf
+
+If cs2.wins > 0 Then
+   Bet cs3.units * $5 on Place5 :
+   Remove Place(point)
+EndIf
+If cs2.wins > 1 And Next roll is not a comeout roll Then
+   Bet $25 on Field
+EndIf
+
+If Bankroll < 10% * beginning bankroll Then
+   start new session
+EndIf
+If bankroll > 1.5 * beginning bankroll And # of rolls > 150 Then
+   start new session
+EndIf
+If # of rolls > 250 Then
+   start new session
+EndIf
+
